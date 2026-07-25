@@ -1,10 +1,10 @@
 # mado
 A PowerShell script to minimally better user experience on Windows. Powered by WinGet and other package managers.
 
-Code written by Gemini 3.1 Pro Extended. The conversation can be found on [https://share.gemini.google/5XMvAHmiNs0n](https://share.gemini.google/5XMvAHmiNs0n).
+Code written by Gemini 3.1 Pro Extended and Gemini 3.1 Flash-Lite Extended. The conversation with Pro Extended can be found on [https://share.gemini.google/5XMvAHmiNs0n](https://share.gemini.google/5XMvAHmiNs0n); the one with Flash-Lite can be found on [https://share.gemini.google/ffry3c4R0Ufc](https://share.gemini.google/ffry3c4R0Ufc).
 
 The script does the following:
-- Install Windows Terminal, PowerShell 7, Neovim, Neovide, Brave Browser, and ONLYOFFICE Desktop Editors
+- Install Windows Terminal, PowerShell 7, LunarVim, Brave Browser, and ONLYOFFICE Desktop Editors
 - Asks users to consider using [Ecosia](https://www.ecosia.org/)
 
 ## Installation
