@@ -4,7 +4,6 @@
 $AppList = @(
     @{ Name = 'Brave Browser'; WinGet = 'Brave.Brave'; Choco = 'brave'; Scoop = 'brave' }
     @{ Name = 'PowerShell 7'; WinGet = 'Microsoft.PowerShell'; Choco = 'powershell'; Scoop = 'pwsh' }
-    @{ Name = 'WinLibs'; WinGet = 'BrechtSanders.WinLibs.POSIX.UCRT'; Choco = 'winlibs'; Scoop = 'mingw-winlibs' }
     @{ Name = 'LunarVim'; WinGet = $null; Choco = $null; Scoop = $null }
     @{ Name = 'ONLYOFFICE Desktop Editors'; WinGet = 'ONLYOFFICE.DesktopEditors'; Choco = 'onlyoffice'; Scoop = 'onlyoffice' }
     @{ Name = 'Windows Terminal'; WinGet = 'Microsoft.WindowsTerminal'; Choco = 'microsoft-windows-terminal'; Scoop = 'windows-terminal' }
@@ -22,7 +21,78 @@ function Update-SessionEnvironment {
     }
 }
 
-# 3. Core Installation Logic
+# 3. Locate and Add 'make' to PATH
+function Add-MakeToPath {
+    Write-Host "`n[*] Locating 'make' executable and adding it to PATH..." -ForegroundColor Cyan
+    $makeBinDir = $null
+    
+    $cmd = Get-Command make -ErrorAction SilentlyContinue
+    if (-not $cmd) {
+        $cmd = Get-Command mingw32-make -ErrorAction SilentlyContinue
+    }
+    
+    if ($cmd) {
+        $makeBinDir = Split-Path $cmd.Source -Parent
+    } else {
+        $searchPaths = @(
+            "$env:ProgramFiles\WinLibs\mingw64\bin",
+            "$env:ProgramFiles\WinLibs\mingw32\bin",
+            "C:\tools\winlibs\mingw64\bin",
+            "$env:USERPROFILE\scoop\apps\*\current\bin",
+            "$env:USERPROFILE\scoop\apps\*\current\mingw64\bin",
+            "C:\ProgramData\chocolatey\bin",
+            "C:\ProgramData\chocolatey\lib\*\tools\bin",
+            "C:\ProgramData\chocolatey\lib\*\tools\mingw64\bin",
+            "$env:LOCALAPPDATA\Programs\*",
+            "C:\msys64\usr\bin",
+            "C:\msys64\mingw64\bin"
+        )
+        
+        foreach ($pattern in $searchPaths) {
+            $resolved = Get-Item $pattern -ErrorAction SilentlyContinue
+            foreach ($dir in $resolved) {
+                if (Test-Path (Join-Path $dir.FullName "make.exe")) {
+                    $makeBinDir = $dir.FullName
+                    break
+                } elseif (Test-Path (Join-Path $dir.FullName "mingw32-make.exe")) {
+                    $makeBinDir = $dir.FullName
+                    break
+                }
+            }
+            if ($makeBinDir) { break }
+        }
+    }
+
+    if ($makeBinDir) {
+        $makePath = Join-Path $makeBinDir "make.exe"
+        $mingwMakePath = Join-Path $makeBinDir "mingw32-make.exe"
+        if ((Test-Path $mingwMakePath) -and (-not (Test-Path $makePath))) {
+            try {
+                Copy-Item $mingwMakePath $makePath -Force
+                Write-Host " -> Created make.exe alias successfully." -ForegroundColor Green
+            } catch {}
+        }
+
+        foreach ($scope in @("Machine", "User")) {
+            try {
+                $currentPath = [Environment]::GetEnvironmentVariable("PATH", $scope)
+                if ($currentPath -notlike "*$makeBinDir*") {
+                    $newPath = if ([string]::IsNullOrEmpty($currentPath)) { $makeBinDir } else { "$currentPath;$makeBinDir" }
+                    [Environment]::SetEnvironmentVariable("PATH", $newPath, $scope)
+                    Write-Host " -> Added $makeBinDir to $scope PATH." -ForegroundColor Green
+                }
+            } catch {}
+        }
+
+        if ($env:PATH -notlike "*$makeBinDir*") {
+            $env:PATH = "$env:PATH;$makeBinDir"
+        }
+    } else {
+        Write-Host " -> Could not automatically detect 'make' path. You may need to add it to your PATH manually." -ForegroundColor Yellow
+    }
+}
+
+# 4. Core Installation Logic
 function Install-Application {
     param($App)
     Write-Host ("`n" + "="*50)
@@ -53,6 +123,8 @@ function Install-Application {
         } catch {
             Write-Host " -> LunarVim installation failed: $_" -ForegroundColor Red
         }
+
+        Add-MakeToPath
         return
     }
 
@@ -87,7 +159,6 @@ function Install-Application {
         Write-Host " -> Attempting Scoop [ID: $($App.Scoop)]" -ForegroundColor Gray
         
         if ($App.Scoop -match 'windows-terminal') { & scoop bucket add extras | Out-Null }
-        if ($App.Scoop -match 'mingw-winlibs') { & scoop bucket add versions | Out-Null }
         
         & scoop install $App.Scoop
         if ($LASTEXITCODE -eq 0) {
@@ -101,7 +172,7 @@ function Install-Application {
     Write-Host " -> All package managers failed or are unavailable for $($App.Name). Manual installation required." -ForegroundColor Red
 }
 
-# 4. Interactive CLI Menu
+# 5. Interactive CLI Menu
 function Read-CliCheckboxes {
     param($Items)
     
@@ -142,27 +213,24 @@ function Read-CliCheckboxes {
             Write-Host "`nInstallation cancelled. Exiting." -ForegroundColor Yellow
             Exit
         } elseif ($input -match '(?i)^\s*a\s*$') {
-            # Toggle all based on whether everything is currently selected or not
             $allSelected = $true
             foreach ($state in $selected) { if (-not $state) { $allSelected = $false; break } }
             for ($i = 0; $i -lt $selected.Count; $i++) { $selected[$i] = -not $allSelected }
         } elseif ([string]::IsNullOrWhiteSpace($input)) {
-            break # User pressed Enter with no input, proceed to install
+            break 
         } else {
-            # Handle comma-separated list of numbers
             $parts = $input -split ','
             foreach ($part in $parts) {
                 if ([int]::TryParse($part.Trim(), [ref]$null)) {
                     $idx = [int]$part.Trim() - 1
                     if ($idx -ge 0 -and $idx -lt $Items.Count) {
-                        $selected[$idx] = -not $selected[$idx] # Toggle specific index
+                        $selected[$idx] = -not $selected[$idx] 
                     }
                 }
             }
         }
     }
     
-    # Map back to targets
     $result = @()
     for ($i = 0; $i -lt $Items.Count; $i++) {
         if ($selected[$i]) { $result += $Items[$i] }
@@ -170,7 +238,7 @@ function Read-CliCheckboxes {
     return $result
 }
 
-# 5. Execution
+# 6. Execution
 $Targets = Read-CliCheckboxes -Items $AppList
 
 if ($Targets.Count -eq 0) {
@@ -185,7 +253,7 @@ foreach ($Target in $Targets) {
     Install-Application -App $Target
 }
 
-# 6. Post-Installation
+# 7. Post-Installation
 Update-SessionEnvironment
 Write-Host "`nInstallation sequence complete." -ForegroundColor Green
 
