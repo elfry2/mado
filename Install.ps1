@@ -35,6 +35,35 @@ function Set-YaziEnvironment {
     Write-Host " -> YAZI_FILE_ONE set to $fileExePath" -ForegroundColor Green
 }
 
+function Set-YaziNeovimOpener {
+    Write-Host "`n[*] Configuring Yazi to use Neovim as the default text opener..." -ForegroundColor Cyan
+    $yaziConfigDir = "$env:APPDATA\yazi\config"
+    if (-not (Test-Path $yaziConfigDir)) {
+        New-Item -ItemType Directory -Path $yaziConfigDir -Force | Out-Null
+    }
+    $yaziTomlPath = Join-Path $yaziConfigDir "yazi.toml"
+    
+    $tomlContent = @"
+[opener]
+edit = [
+    { run = 'nvim "%s"', block = true, for = "windows" }
+]
+"@
+
+    if (Test-Path $yaziTomlPath) {
+        $content = Get-Content $yaziTomlPath -Raw
+        if ($content -notmatch '\[opener\]') {
+            Add-Content -Path $yaziTomlPath -Value "`n$tomlContent"
+            Write-Host " -> Added Neovim opener to existing $yaziTomlPath" -ForegroundColor Green
+        } else {
+            Write-Host " -> yazi.toml already contains an [opener] section. Skipping override to preserve custom settings." -ForegroundColor Yellow
+        }
+    } else {
+        Set-Content -Path $yaziTomlPath -Value $tomlContent -Encoding UTF8
+        Write-Host " -> Created yazi.toml with Neovim as text opener at $yaziTomlPath" -ForegroundColor Green
+    }
+}
+
 # 3. Core Installation Logic with Fallback Handling
 function Install-Application {
     param($App)
@@ -69,7 +98,6 @@ function Install-Application {
         if ($manager.IsValid -and (Get-Command $manager.Exe -ErrorAction SilentlyContinue)) {
             Write-Host " -> Attempting $($manager.Name)..." -ForegroundColor Gray
             
-            # Special handling for Scoop extras bucket requirement
             if ($manager.Name -eq 'scoop' -and $App.Scoop -match 'windows-terminal') { 
                 scoop bucket add extras | Out-Null 
             }
@@ -158,6 +186,7 @@ foreach ($target in $Targets) {
 }
 
 Set-YaziEnvironment
+Set-YaziNeovimOpener
 Update-SessionEnvironment
 
 Write-Host "`nInstallation sequence complete!" -ForegroundColor Green
