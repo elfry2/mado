@@ -4,8 +4,7 @@
 $AppList = @(
     @{ Name = 'Brave Browser'; WinGet = 'Brave.Brave'; Choco = 'brave'; Scoop = 'brave' }
     @{ Name = 'PowerShell 7'; WinGet = 'Microsoft.PowerShell'; Choco = 'powershell'; Scoop = 'pwsh' }
-    @{ Name = 'Neovim'; WinGet = 'Neovim.Neovim'; Choco = 'neovim'; Scoop = 'neovim' }
-    @{ Name = 'Neovide'; WinGet = 'Neovide.Neovide'; Choco = 'neovide'; Scoop = 'neovide' }
+    @{ Name = 'LunarVim'; WinGet = $null; Choco = $null; Scoop = $null }
     @{ Name = 'ONLYOFFICE Desktop Editors'; WinGet = 'ONLYOFFICE.DesktopEditors'; Choco = 'onlyoffice'; Scoop = 'onlyoffice' }
     @{ Name = 'Windows Terminal'; WinGet = 'Microsoft.WindowsTerminal'; Choco = 'microsoft-windows-terminal'; Scoop = 'windows-terminal' }
 )
@@ -27,6 +26,34 @@ function Install-Application {
     param($App)
     Write-Host ("`n" + "="*50)
     Write-Host "Installing: $($App.Name)" -ForegroundColor Cyan
+
+    # Special handling for LunarVim (requires Neovim prerequisite and official installer script)
+    if ($App.Name -eq 'LunarVim') {
+        Write-Host " -> Ensuring Neovim prerequisite is installed..." -ForegroundColor Gray
+        $nvimInstalled = $false
+
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+            & winget install --id Neovim.Neovim --exact --silent --accept-package-agreements --accept-source-agreements
+            if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq -1978335189) { $nvimInstalled = $true }
+        }
+        if (-not $nvimInstalled -and (Get-Command choco -ErrorAction SilentlyContinue)) {
+            & choco install neovim -y
+            if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 3010) { $nvimInstalled = $true }
+        }
+        if (-not $nvimInstalled -and (Get-Command scoop -ErrorAction SilentlyContinue)) {
+            & scoop install neovim
+            if ($LASTEXITCODE -eq 0) { $nvimInstalled = $true }
+        }
+
+        Write-Host " -> Running LunarVim installer script..." -ForegroundColor Gray
+        try {
+            & pwsh -Command "iwr https://raw.githubusercontent.com/LunarVim/LunarVim/master/utils/installer/install.ps1 -UseBasicParsing | iex"
+            Write-Host " -> Success (LunarVim)" -ForegroundColor Green
+        } catch {
+            Write-Host " -> LunarVim installation failed: $_" -ForegroundColor Red
+        }
+        return
+    }
 
     # WinGet
     if (Get-Command winget -ErrorAction SilentlyContinue) {
@@ -58,7 +85,7 @@ function Install-Application {
     if (Get-Command scoop -ErrorAction SilentlyContinue) {
         Write-Host " -> Attempting Scoop [ID: $($App.Scoop)]" -ForegroundColor Gray
         
-        if ($App.Scoop -match 'neovide|windows-terminal') { & scoop bucket add extras | Out-Null }
+        if ($App.Scoop -match 'windows-terminal') { & scoop bucket add extras | Out-Null }
         
         & scoop install $App.Scoop
         if ($LASTEXITCODE -eq 0) {
@@ -102,10 +129,10 @@ function Read-CliCheckboxes {
         }
 
         Write-Host "`n Options:" -ForegroundColor Cyan
-        Write-Host "  [1-$($Items.Count)] Toggle specific applications" -ForegroundColor White
-        Write-Host "  [A] Toggle all" -ForegroundColor White
-        Write-Host "  [Q] Quit" -ForegroundColor White
-        Write-Host "  [Enter] Confirm and Install" -ForegroundColor White
+        Write-Host "   [1-$($Items.Count)] Toggle specific applications" -ForegroundColor White
+        Write-Host "   [A] Toggle all" -ForegroundColor White
+        Write-Host "   [Q] Quit" -ForegroundColor White
+        Write-Host "   [Enter] Confirm and Install" -ForegroundColor White
         
         $input = Read-Host "`n Your selection"
 
