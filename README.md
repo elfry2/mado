@@ -1,7 +1,7 @@
 # mado
 A PowerShell script to minimally better user experience on Windows. Powered by WinGet and other package managers.
 
-Code written by Gemini 3.1 Pro Extended and Gemini 3.1 Flash-Lite Extended. The conversation with Pro Extended can be found on [https://share.gemini.google/5XMvAHmiNs0n](https://share.gemini.google/5XMvAHmiNs0n); the one with Flash-Lite can be found on [https://share.gemini.google/OGvX6v8yQEM3](https://share.gemini.google/OGvX6v8yQEM3).
+Code written by Gemini 3.1 Pro Extended and Gemini 3.1 Flash-Lite Extended. The conversation with Pro Extended can be found on [https://share.gemini.google/5XMvAHmiNs0n](https://share.gemini.google/5XMvAHmiNs0n); the one with Flash-Lite can be found on [https://share.gemini.google/3jwI5SC49cQD](https://share.gemini.google/3jwI5SC49cQD).
 
 The script does the following:
 - Install Windows Terminal, PowerShell 7, LunarVim, Brave Browser, and ONLYOFFICE Desktop Editors
