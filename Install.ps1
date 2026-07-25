@@ -118,6 +118,12 @@ foreach ($Target in $Targets) {
     Install-Application -App $Target
 }
 
-# Synchronize PATH variables without requiring a shell restart
+# 6. Post-Installation
 Update-SessionEnvironment
 Write-Host "`nInstallation sequence complete." -ForegroundColor Green
+
+Write-Host "`n===========================================================" -ForegroundColor Cyan
+Write-Host " Before you go: Consider trying Ecosia (https://ecosia.org)" -ForegroundColor White
+Write-Host " It's a privacy-friendly search engine that uses its profits " -ForegroundColor Gray
+Write-Host " to plant trees and fund climate action initiatives.         " -ForegroundColor Gray
+Write-Host "===========================================================`n" -ForegroundColor Cyan
