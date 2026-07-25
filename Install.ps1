@@ -6,7 +6,7 @@ $AppList = @(
     @{ Name = 'PowerShell 7'; WinGet = 'Microsoft.PowerShell'; Choco = 'powershell'; Scoop = 'pwsh' }
     @{ Name = 'Neovim'; WinGet = 'Neovim.Neovim'; Choco = 'neovim'; Scoop = 'neovim' }
     @{ Name = 'Yazi'; WinGet = 'sxyazi.yazi'; Choco = 'yazi'; Scoop = 'yazi' }
-    @{ Name = 'File Command (MIME Detection)'; Choco = 'file'; Scoop = 'file' }
+    @{ Name = 'File Command (MIME Detection)'; WinGet = $null; Choco = 'file'; Scoop = 'file' }
     @{ Name = 'ONLYOFFICE Desktop Editors'; WinGet = 'ONLYOFFICE.DesktopEditors'; Choco = 'onlyoffice'; Scoop = 'onlyoffice' }
     @{ Name = 'Windows Terminal'; WinGet = 'Microsoft.WindowsTerminal'; Choco = 'microsoft-windows-terminal'; Scoop = 'windows-terminal' }
 )
@@ -53,22 +53,44 @@ function Install-Application {
     Write-Host "Installing: $($App.Name)" -ForegroundColor Cyan
 
     $managers = @(
-        @{ Cmd = 'winget'; Arg = "install --id $($App.WinGet) --exact --silent --accept-package-agreements --accept-source-agreements"; Success = @(0, -1978335189) },
-        @{ Cmd = 'choco';  Arg = "install $($App.Choco) -y"; Success = @(0, 3010) },
-        @{ Cmd = 'scoop';  Arg = "install $($App.Scoop)"; Success = @(0) }
+        @{ 
+            Name = 'winget'
+            Executable = 'winget'
+            Args = @('install', '--id', $App.WinGet, '--exact', '--silent', '--accept-package-agreements', '--accept-source-agreements')
+            IsValid = [bool]$App.WinGet
+            SuccessCodes = @(0, -1978335189)
+        },
+        @{ 
+            Name = 'choco'
+            Executable = 'choco'
+            Args = @('install', $App.Choco, '-y')
+            IsValid = [bool]$App.Choco
+            SuccessCodes = @(0, 3010)
+        },
+        @{ 
+            Name = 'scoop'
+            Executable = 'scoop'
+            Args = @('install', $App.Scoop)
+            IsValid = [bool]$App.Scoop
+            SuccessCodes = @(0)
+        }
     )
 
     foreach ($m in $managers) {
-        if ($App[$m.Cmd] -and (Get-Command $m.Cmd -ErrorAction SilentlyContinue)) {
-            Write-Host " -> Attempting $($m.Cmd)..." -ForegroundColor Gray
-            if ($m.Cmd -eq 'scoop' -and $App.Scoop -match 'windows-terminal') { scoop bucket add extras | Out-Null }
+        if ($m.IsValid -and (Get-Command $m.Executable -ErrorAction SilentlyContinue)) {
+            Write-Host " -> Attempting $($m.Name)..." -ForegroundColor Gray
             
-            & $m.Cmd $($m.Arg)
-            if ($m.Success -contains $LASTEXITCODE) {
-                Write-Host " -> Success ($($m.Cmd))" -ForegroundColor Green
+            if ($m.Name -eq 'scoop' -and $App.Scoop -match 'windows-terminal') { 
+                scoop bucket add extras | Out-Null 
+            }
+
+            & $m.Executable @($m.Args)
+            
+            if ($m.SuccessCodes -contains $LASTEXITCODE) {
+                Write-Host " -> Success ($($m.Name))" -ForegroundColor Green
                 return
             }
-            Write-Host " -> $($m.Cmd) failed (Exit Code: $LASTEXITCODE). Falling back..." -ForegroundColor Yellow
+            Write-Host " -> $($m.Name) failed (Exit Code: $LASTEXITCODE). Falling back..." -ForegroundColor Yellow
         }
     }
     Write-Host " -> Manual installation required for $($App.Name)." -ForegroundColor Red
