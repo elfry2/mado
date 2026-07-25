@@ -3,16 +3,14 @@ $ErrorActionPreference = 'Stop'
 
 # 1. Application Definitions
 $AppList = @(
-    @{ Name = 'Git for Windows'; WinGet = 'Git.Git'; Choco = 'git'; Scoop = 'git' }
     @{ Name = 'Brave Browser'; WinGet = 'Brave.Brave'; Choco = 'brave'; Scoop = 'brave' }
     @{ Name = 'PowerShell 7'; WinGet = 'Microsoft.PowerShell'; Choco = 'powershell'; Scoop = 'pwsh' }
     @{ Name = 'Neovim'; WinGet = 'Neovim.Neovim'; Choco = 'neovim'; Scoop = 'neovim' }
-    @{ Name = 'Yazi'; WinGet = 'sxyazi.yazi'; Choco = 'yazi'; Scoop = 'yazi' }
     @{ Name = 'ONLYOFFICE Desktop Editors'; WinGet = 'ONLYOFFICE.DesktopEditors'; Choco = 'onlyoffice'; Scoop = 'onlyoffice' }
     @{ Name = 'Windows Terminal'; WinGet = 'Microsoft.WindowsTerminal'; Choco = 'microsoft-windows-terminal'; Scoop = 'windows-terminal' }
 )
 
-# 2. Environment Variable & Yazi Configuration Synchronization
+# 2. Environment Synchronization
 function Update-SessionEnvironment {
     Write-Host "`n[*] Synchronizing session environment variables..." -ForegroundColor Cyan
     foreach ($level in 'Machine', 'User') {
@@ -24,15 +22,6 @@ function Update-SessionEnvironment {
             Write-Host " -> Warning: Could not sync $level environment variables." -ForegroundColor Yellow
         }
     }
-}
-
-function Set-YaziEnvironment {
-    Write-Host "`n[*] Configuring YAZI_FILE_ONE to use Git's file utility..." -ForegroundColor Cyan
-    $fileExePath = "C:\Program Files\Git\usr\bin\file.exe"
-    
-    [Environment]::SetEnvironmentVariable("YAZI_FILE_ONE", $fileExePath, "User")
-    $env:YAZI_FILE_ONE = $fileExePath
-    Write-Host " -> YAZI_FILE_ONE set to $fileExePath" -ForegroundColor Green
 }
 
 # 3. Core Installation Logic with Fallback Handling
@@ -156,7 +145,6 @@ foreach ($target in $Targets) {
     Install-Application -App $target
 }
 
-Set-YaziEnvironment
 Update-SessionEnvironment
 
 Write-Host "`nInstallation sequence complete!" -ForegroundColor Green
