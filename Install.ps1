@@ -33,7 +33,6 @@ function Install-Application {
         Write-Host " -> Attempting WinGet [ID: $($App.WinGet)]" -ForegroundColor Gray
         & winget install --id $App.WinGet --exact --silent --accept-package-agreements --accept-source-agreements
         
-        # 0 = Success, -1978335189 (0x8A15002B) = Already installed
         if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq -1978335189) { 
             Write-Host " -> Success (WinGet)" -ForegroundColor Green
             return
@@ -47,7 +46,6 @@ function Install-Application {
         Write-Host " -> Attempting Chocolatey [ID: $($App.Choco)]" -ForegroundColor Gray
         & choco install $App.Choco -y
         
-        # 0 = Success, 3010 = Success (Reboot required)
         if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 3010) { 
             Write-Host " -> Success (Chocolatey)" -ForegroundColor Green
             return
@@ -60,7 +58,6 @@ function Install-Application {
     if (Get-Command scoop -ErrorAction SilentlyContinue) {
         Write-Host " -> Attempting Scoop [ID: $($App.Scoop)]" -ForegroundColor Gray
         
-        # Handle Scoop extra buckets for specific packages
         if ($App.Scoop -match 'neovide|windows-terminal') { & scoop bucket add extras | Out-Null }
         
         & scoop install $App.Scoop
@@ -72,45 +69,63 @@ function Install-Application {
         }
     }
 
-    # Other Methods / Fail State
     Write-Host " -> All package managers failed or are unavailable for $($App.Name). Manual installation required." -ForegroundColor Red
 }
 
-# 4. Interactive Menu
+# 4. Interactive GUI Menu (Windows Forms)
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "WARNING: Script is not running as Administrator. Some installations will fail." -ForegroundColor Red
 }
 
-Write-Host "`nWindows 10 Setup - Application Installer" -ForegroundColor Green
-for ($i = 0; $i -lt $AppList.Count; $i++) {
-    Write-Host " [$($i + 1)] $($AppList[$i].Name)"
-}
-Write-Host " [A] All of the above"
-Write-Host " [Q] Quit"
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
-$Selection = Read-Host "`nEnter numbers separated by commas (e.g., 1,3,4), 'A', or 'Q'"
+$form = New-Object System.Windows.Forms.Form
+$form.Text = 'Select Applications to Install'
+$form.Size = New-Object System.Drawing.Size(350, 260)
+$form.StartPosition = 'CenterScreen'
+$form.FormBorderStyle = 'FixedDialog'
+$form.MaximizeBox = $false
+$form.TopMost = $true # Ensures the dialog appears above the PowerShell window
+
+$checkedListBox = New-Object System.Windows.Forms.CheckedListBox
+$checkedListBox.Size = New-Object System.Drawing.Size(310, 140)
+$checkedListBox.Location = New-Object System.Drawing.Point(10, 10)
+$checkedListBox.CheckOnClick = $true
+
+# Populate list and check all by default
+foreach ($app in $AppList) {
+    [void]$checkedListBox.Items.Add($app.Name, $true)
+}
+
+$okButton = New-Object System.Windows.Forms.Button
+$okButton.Size = New-Object System.Drawing.Size(75, 25)
+$okButton.Location = New-Object System.Drawing.Point(160, 170)
+$okButton.Text = 'Install'
+$okButton.DialogResult = 'OK'
+
+$cancelButton = New-Object System.Windows.Forms.Button
+$cancelButton.Size = New-Object System.Drawing.Size(75, 25)
+$cancelButton.Location = New-Object System.Drawing.Point(245, 170)
+$cancelButton.Text = 'Cancel'
+$cancelButton.DialogResult = 'Cancel'
+
+$form.Controls.AddRange(@($checkedListBox, $okButton, $cancelButton))
+$form.AcceptButton = $okButton
+$form.CancelButton = $cancelButton
+
+$result = $form.ShowDialog()
+
+if ($result -ne 'OK' -or $checkedListBox.CheckedItems.Count -eq 0) {
+    Write-Host "`nInstallation cancelled or no applications selected. Exiting." -ForegroundColor Yellow
+    Exit
+}
+
+# Map checked items back to the application objects
 $Targets = @()
-
-if ($Selection -match '(?i)q') {
-    Exit
-} elseif ($Selection -match '(?i)a') {
-    $Targets = $AppList
-} else {
-    $Parts = $Selection -split ','
-    foreach ($Part in $Parts) {
-        if ([int]::TryParse($Part.Trim(), [ref]$null)) {
-            $Index = [int]$Part.Trim() - 1
-            if ($Index -ge 0 -and $Index -lt $AppList.Count) {
-                $Targets += $AppList[$Index]
-            }
-        }
-    }
-}
-
-if ($Targets.Count -eq 0) {
-    Write-Host "No valid selections made. Exiting." -ForegroundColor Yellow
-    Exit
+foreach ($checkedItem in $checkedListBox.CheckedItems) {
+    $Targets += $AppList | Where-Object { $_.Name -eq $checkedItem }
 }
 
 # 5. Execution
