@@ -6,6 +6,7 @@ $AppList = @(
     @{ Name = 'PowerShell 7'; WinGet = 'Microsoft.PowerShell'; Choco = 'powershell'; Scoop = 'pwsh' }
     @{ Name = 'Neovim'; WinGet = 'Neovim.Neovim'; Choco = 'neovim'; Scoop = 'neovim' }
     @{ Name = 'Yazi'; WinGet = 'sxyazi.yazi'; Choco = 'yazi'; Scoop = 'yazi' }
+    @{ Name = 'File Command (MIME Detection)'; WinGet = ''; Choco = 'file'; Scoop = 'file' }
     @{ Name = 'ONLYOFFICE Desktop Editors'; WinGet = 'ONLYOFFICE.DesktopEditors'; Choco = 'onlyoffice'; Scoop = 'onlyoffice' }
     @{ Name = 'Windows Terminal'; WinGet = 'Microsoft.WindowsTerminal'; Choco = 'microsoft-windows-terminal'; Scoop = 'windows-terminal' }
 )
@@ -29,7 +30,7 @@ function Install-Application {
     Write-Host "Installing: $($App.Name)" -ForegroundColor Cyan
 
     # WinGet
-    if (Get-Command winget -ErrorAction SilentlyContinue) {
+    if ($App.WinGet -and (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Host " -> Attempting WinGet [ID: $($App.WinGet)]" -ForegroundColor Gray
         & winget install --id $App.WinGet --exact --silent --accept-package-agreements --accept-source-agreements
         
@@ -42,7 +43,7 @@ function Install-Application {
     }
 
     # Chocolatey
-    if (Get-Command choco -ErrorAction SilentlyContinue) {
+    if ($App.Choco -and (Get-Command choco -ErrorAction SilentlyContinue)) {
         Write-Host " -> Attempting Chocolatey [ID: $($App.Choco)]" -ForegroundColor Gray
         & choco install $App.Choco -y
         
@@ -55,7 +56,7 @@ function Install-Application {
     }
 
     # Scoop
-    if (Get-Command scoop -ErrorAction SilentlyContinue) {
+    if ($App.Scoop -and (Get-Command scoop -ErrorAction SilentlyContinue)) {
         Write-Host " -> Attempting Scoop [ID: $($App.Scoop)]" -ForegroundColor Gray
         
         if ($App.Scoop -match 'windows-terminal') { & scoop bucket add extras | Out-Null }
@@ -74,41 +75,42 @@ function Install-Application {
 
 # 4. Yazi & Neovim Configuration Logic
 function Configure-YaziForNeovim {
-    Write-Host "`n[*] Configuring Yazi to use Neovim (nvim) as the default editor..." -ForegroundColor Cyan
+    Write-Host "`n[*] Configuring Yazi to use Neovim (nvim)..." -ForegroundColor Cyan
     
     try {
         [Environment]::SetEnvironmentVariable("EDITOR", "nvim", "User")
+        $env:EDITOR = "nvim"
         Write-Host " -> Set User Environment Variable EDITOR = nvim" -ForegroundColor Green
     } catch {
         Write-Host " -> Could not set EDITOR environment variable: $_" -ForegroundColor Yellow
     }
 
     $yaziConfigDir = "$env:APPDATA\yazi\config"
-    $yaziLegacyDir = "$env:APPDATA\yazi"
-
-    foreach ($dir in @($yaziConfigDir, $yaziLegacyDir)) {
-        if (-not (Test-Path $dir)) {
-            New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        }
+    if (-not (Test-Path $yaziConfigDir)) {
+        New-Item -ItemType Directory -Path $yaziConfigDir -Force | Out-Null
     }
 
     $yaziTomlContent = @"
 [opener]
 edit = [
-    { run = 'nvim %s', block = true, desc = "Neovim" },
+    { run = 'nvim "%1"', block = true, desc = "Neovim", for = "windows" }
+]
+
+[open]
+prepend_rules = [
+    { mime = "text/*", use = "edit" },
+    { name = ".*",     use = "edit" }
 ]
 "@
 
     Set-Content -Path "$yaziConfigDir\yazi.toml" -Value $yaziTomlContent -Encoding utf8
-    Set-Content -Path "$yaziLegacyDir\yazi.toml" -Value $yaziTomlContent -Encoding utf8
-    Write-Host " -> Yazi configuration updated successfully with Neovim opener." -ForegroundColor Green
+    Write-Host " -> Yazi configuration updated with MIME rules." -ForegroundColor Green
 }
 
 # 5. Interactive CLI Menu
 function Read-CliCheckboxes {
     param($Items)
     
-    # Initialize all as selected
     $selected = @($true) * $Items.Count 
 
     while ($true) {
@@ -185,7 +187,6 @@ foreach ($Target in $Targets) {
     Install-Application -App $Target
 }
 
-# Configure Yazi if selected
 if ($Targets.Name -contains 'Yazi') {
     Configure-YaziForNeovim
 }
