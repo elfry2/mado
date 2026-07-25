@@ -35,36 +35,6 @@ function Set-YaziEnvironment {
     Write-Host " -> YAZI_FILE_ONE set to $fileExePath" -ForegroundColor Green
 }
 
-function Set-YaziNeovimOpener {
-    Write-Host "`n[*] Configuring Yazi to use Neovim as the default 'edit' opener..." -ForegroundColor Cyan
-    $yaziConfigDir = "$env:APPDATA\yazi\config"
-    if (-not (Test-Path $yaziConfigDir)) {
-        New-Item -ItemType Directory -Path $yaziConfigDir -Force | Out-Null
-    }
-    $yaziTomlPath = Join-Path $yaziConfigDir "yazi.toml"
-    
-    $tomlContent = @'
-[opener]
-edit = [
-    { run = 'nvim "%s"', block = true, for = "windows" },
-    { run = 'nvim "$@"', block = true, for = "unix" },
-]
-'@
-
-    if (Test-Path $yaziTomlPath) {
-        $content = Get-Content $yaziTomlPath -Raw
-        if ($content -notmatch 'edit\s*=') {
-            Add-Content -Path $yaziTomlPath -Value "`n$tomlContent"
-            Write-Host " -> Added Neovim edit opener to existing yazi.toml" -ForegroundColor Green
-        } else {
-            Write-Host " -> yazi.toml already contains an 'edit' opener. Skipping override to preserve custom settings." -ForegroundColor Yellow
-        }
-    } else {
-        Set-Content -Path $yaziTomlPath -Value $tomlContent -Encoding UTF8
-        Write-Host " -> Created yazi.toml with Neovim edit opener at $yaziTomlPath" -ForegroundColor Green
-    }
-}
-
 # 3. Core Installation Logic with Fallback Handling
 function Install-Application {
     param($App)
@@ -187,7 +157,6 @@ foreach ($target in $Targets) {
 }
 
 Set-YaziEnvironment
-Set-YaziNeovimOpener
 Update-SessionEnvironment
 
 Write-Host "`nInstallation sequence complete!" -ForegroundColor Green
