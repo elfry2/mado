@@ -3,10 +3,10 @@ A PowerShell script to minimally better user experience for common users on Wind
 
 Code written by Gemini. The conversations can be found on the following links:
 - [https://share.gemini.google/5XMvAHmiNs0n](https://share.gemini.google/5XMvAHmiNs0n)
-- [https://share.gemini.google/eRQgVyapyov6](https://share.gemini.google/eRQgVyapyov6)
+- [https://share.gemini.google/6uJupy5cfve7](https://share.gemini.google/6uJupy5cfve7)
 
 The script does the following:
-- Install Windows Terminal, PowerShell 7, Yazi, Neovim, Brave Browser, and ONLYOFFICE Desktop Editors
+- Install Windows Terminal, PowerShell 7, Yazi, Neovim, Brave Browser, and ONLYOFFICE Desktop Editors in machine scope, as opposed to user scope
 - Ask users to consider using [Ecosia](https://www.ecosia.org/)
 
 ## Installation
