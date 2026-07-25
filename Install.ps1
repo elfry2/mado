@@ -4,6 +4,7 @@
 $AppList = @(
     @{ Name = 'Brave Browser'; WinGet = 'Brave.Brave'; Choco = 'brave'; Scoop = 'brave' }
     @{ Name = 'PowerShell 7'; WinGet = 'Microsoft.PowerShell'; Choco = 'powershell'; Scoop = 'pwsh' }
+    @{ Name = 'WinLibs'; WinGet = 'BrechtSanders.WinLibs.POSIX.UCRT'; Choco = 'winlibs'; Scoop = 'mingw-winlibs' }
     @{ Name = 'LunarVim'; WinGet = $null; Choco = $null; Scoop = $null }
     @{ Name = 'ONLYOFFICE Desktop Editors'; WinGet = 'ONLYOFFICE.DesktopEditors'; Choco = 'onlyoffice'; Scoop = 'onlyoffice' }
     @{ Name = 'Windows Terminal'; WinGet = 'Microsoft.WindowsTerminal'; Choco = 'microsoft-windows-terminal'; Scoop = 'windows-terminal' }
@@ -86,6 +87,7 @@ function Install-Application {
         Write-Host " -> Attempting Scoop [ID: $($App.Scoop)]" -ForegroundColor Gray
         
         if ($App.Scoop -match 'windows-terminal') { & scoop bucket add extras | Out-Null }
+        if ($App.Scoop -match 'mingw-winlibs') { & scoop bucket add versions | Out-Null }
         
         & scoop install $App.Scoop
         if ($LASTEXITCODE -eq 0) {
