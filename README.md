@@ -1,5 +1,5 @@
 # mado
-A PowerShell script to minimally better user experience on Windows. Powered by WinGet and other package managers.
+A PowerShell script to minimally better user experience for common users on Windows. Powered by WinGet and other package managers.
 
 Code written by Gemini 3.1 Pro Extended and Gemini 3.1 Flash-Lite Extended. The conversation with Pro Extended can be found on [https://share.gemini.google/5XMvAHmiNs0n](https://share.gemini.google/5XMvAHmiNs0n); the one with Flash-Lite can be found on [https://share.gemini.google/0e5uJEBqIvbZ](https://share.gemini.google/0e5uJEBqIvbZ).
 
