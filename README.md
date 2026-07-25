@@ -4,7 +4,7 @@ A PowerShell script to minimally better user experience on Windows. Powered by W
 Code written by Gemini 3.1 Pro Extended and Gemini 3.1 Flash-Lite Extended. The conversation with Pro Extended can be found on [https://share.gemini.google/5XMvAHmiNs0n](https://share.gemini.google/5XMvAHmiNs0n); the one with Flash-Lite can be found on [https://share.gemini.google/0e5uJEBqIvbZ](https://share.gemini.google/0e5uJEBqIvbZ).
 
 The script does the following:
-- Install Windows Terminal, PowerShell 7, LunarVim, Brave Browser, and ONLYOFFICE Desktop Editors
+- Install Windows Terminal, PowerShell 7, Neovim, Brave Browser, and ONLYOFFICE Desktop Editors
 - Asks users to consider using [Ecosia](https://www.ecosia.org/)
 
 ## Installation
