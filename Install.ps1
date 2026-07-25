@@ -82,7 +82,7 @@ function Read-CliCheckboxes {
     while ($true) {
         Clear-Host
         Write-Host "`n===========================================================" -ForegroundColor Cyan
-        Write-Host " Windows 10 Setup - Application Installer" -ForegroundColor Green
+        Write-Host " mado - Better Windows Experience" -ForegroundColor Green
         Write-Host "===========================================================" -ForegroundColor Cyan
         
         $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
