@@ -25,20 +25,38 @@ function Update-SessionEnvironment {
     }
 }
 
-# 3. Core Installation Logic
+# 3. Core Installation Logic (Forced Machine/Global Scope)
 function Install-Application {
     param($App)
-    Write-Host "`n$('-'*50)`nInstalling: $($App.Name)" -ForegroundColor Cyan
+    Write-Host "`n$('-'*50)`nInstalling (Machine Scope): $($App.Name)" -ForegroundColor Cyan
 
     $managers = @(
-        @{ Name = 'winget'; Exe = 'winget'; Args = @('install', '--id', $App.WinGet, '--exact', '--silent', '--accept-package-agreements', '--accept-source-agreements'); Valid = [bool]$App.WinGet; OK = @(0, -1978335189) },
-        @{ Name = 'choco';  Exe = 'choco';  Args = @('install', $App.Choco, '-y'); Valid = [bool]$App.Choco; OK = @(0, 3010) },
-        @{ Name = 'scoop';  Exe = 'scoop';  Args = @('install', $App.Scoop); Valid = [bool]$App.Scoop; OK = @(0) }
+        @{ 
+            Name = 'winget'
+            Exe = 'winget'
+            Args = @('install', '--id', $App.WinGet, '--exact', '--silent', '--accept-package-agreements', '--accept-source-agreements', '--scope', 'machine')
+            Valid = [bool]$App.WinGet
+            OK = @(0, -1978335189)
+        },
+        @{ 
+            Name = 'choco'
+            Exe = 'choco'
+            Args = @('install', $App.Choco, '-y')
+            Valid = [bool]$App.Choco
+            OK = @(0, 3010)
+        },
+        @{ 
+            Name = 'scoop'
+            Exe = 'scoop'
+            Args = @('install', $App.Scoop, '--global')
+            Valid = [bool]$App.Scoop
+            OK = @(0)
+        }
     )
 
     foreach ($m in $managers) {
         if ($m.Valid -and (Get-Command $m.Exe -ErrorAction SilentlyContinue)) {
-            Write-Host " -> Attempting $($m.Name)..." -ForegroundColor Gray
+            Write-Host " -> Attempting $($m.Name) (Global/Machine)..." -ForegroundColor Gray
             if ($m.Name -eq 'scoop' -and $App.Scoop -match 'windows-terminal') { scoop bucket add extras | Out-Null }
             
             & $m.Exe @($m.Args)
@@ -61,11 +79,11 @@ function Read-CliCheckboxes {
     while ($true) {
         Clear-Host
         Write-Host "`n===========================================================" -ForegroundColor Cyan
-        Write-Host " mado - Better Windows Experience" -ForegroundColor Green
+        Write-Host " mado - Better Windows Experience (Machine Scope)" -ForegroundColor Green
         Write-Host "===========================================================" -ForegroundColor Cyan
         
         if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-            Write-Host " WARNING: Script is not running as Administrator.`n" -ForegroundColor Red
+            Write-Host " WARNING: Script must run as Administrator for machine-wide installs.`n" -ForegroundColor Red
         }
 
         for ($i = 0; $i -lt $Items.Count; $i++) {
@@ -107,4 +125,4 @@ Clear-Host
 foreach ($Target in $Targets) { Install-Application -App $Target }
 
 Update-SessionEnvironment
-Write-Host "`nInstallation sequence complete!`n" -ForegroundColor Green
+Write-Host "`nInstallation sequence complete (Machine Scope)!" -ForegroundColor Green
