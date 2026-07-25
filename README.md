@@ -5,7 +5,7 @@ Code written by Gemini 3.1 Pro Extended and Gemini 3.1 Flash-Lite Extended. The 
 
 The script does the following:
 - Install Windows Terminal, PowerShell 7, Neovim, Brave Browser, and ONLYOFFICE Desktop Editors
-- Asks users to consider using [Ecosia](https://www.ecosia.org/)
+- Ask users to consider using [Ecosia](https://www.ecosia.org/)
 
 ## Installation
 On PowerShell 5.1+ with administrative privileges on Windows, execute (can be pasted at once)
