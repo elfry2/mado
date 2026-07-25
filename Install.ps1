@@ -1,6 +1,13 @@
 # Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'
 
+# Enforce Administrator Privileges
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "`n[ERROR] This script must be run as Administrator." -ForegroundColor Red
+    Write-Host "Please restart your terminal as an Administrator and try again.`n" -ForegroundColor Yellow
+    Exit
+}
+
 # 1. Application Definitions (Git added for native file utility support)
 $AppList = @(
     @{ Name = 'Git for Windows'; WinGet = 'Git.Git'; Choco = 'git'; Scoop = 'git' }
