@@ -4,7 +4,7 @@
 $AppList = @(
     @{ Name = 'Brave Browser'; WinGet = 'Brave.Brave'; Choco = 'brave'; Scoop = 'brave' }
     @{ Name = 'PowerShell 7'; WinGet = 'Microsoft.PowerShell'; Choco = 'powershell'; Scoop = 'pwsh' }
-    @{ Name = 'LunarVim'; WinGet = $null; Choco = $null; Scoop = $null }
+    @{ Name = 'Neovim'; WinGet = 'Neovim.Neovim'; Choco = 'neovim'; Scoop = 'neovim' }
     @{ Name = 'ONLYOFFICE Desktop Editors'; WinGet = 'ONLYOFFICE.DesktopEditors'; Choco = 'onlyoffice'; Scoop = 'onlyoffice' }
     @{ Name = 'Windows Terminal'; WinGet = 'Microsoft.WindowsTerminal'; Choco = 'microsoft-windows-terminal'; Scoop = 'windows-terminal' }
 )
@@ -21,112 +21,11 @@ function Update-SessionEnvironment {
     }
 }
 
-# 3. Locate and Add 'make' to PATH
-function Add-MakeToPath {
-    Write-Host "`n[*] Locating 'make' executable and adding it to PATH..." -ForegroundColor Cyan
-    $makeBinDir = $null
-    
-    $cmd = Get-Command make -ErrorAction SilentlyContinue
-    if (-not $cmd) {
-        $cmd = Get-Command mingw32-make -ErrorAction SilentlyContinue
-    }
-    
-    if ($cmd) {
-        $makeBinDir = Split-Path $cmd.Source -Parent
-    } else {
-        $searchPaths = @(
-            "$env:ProgramFiles\WinLibs\mingw64\bin",
-            "$env:ProgramFiles\WinLibs\mingw32\bin",
-            "C:\tools\winlibs\mingw64\bin",
-            "$env:USERPROFILE\scoop\apps\*\current\bin",
-            "$env:USERPROFILE\scoop\apps\*\current\mingw64\bin",
-            "C:\ProgramData\chocolatey\bin",
-            "C:\ProgramData\chocolatey\lib\*\tools\bin",
-            "C:\ProgramData\chocolatey\lib\*\tools\mingw64\bin",
-            "$env:LOCALAPPDATA\Programs\*",
-            "C:\msys64\usr\bin",
-            "C:\msys64\mingw64\bin"
-        )
-        
-        foreach ($pattern in $searchPaths) {
-            $resolved = Get-Item $pattern -ErrorAction SilentlyContinue
-            foreach ($dir in $resolved) {
-                if (Test-Path (Join-Path $dir.FullName "make.exe")) {
-                    $makeBinDir = $dir.FullName
-                    break
-                } elseif (Test-Path (Join-Path $dir.FullName "mingw32-make.exe")) {
-                    $makeBinDir = $dir.FullName
-                    break
-                }
-            }
-            if ($makeBinDir) { break }
-        }
-    }
-
-    if ($makeBinDir) {
-        $makePath = Join-Path $makeBinDir "make.exe"
-        $mingwMakePath = Join-Path $makeBinDir "mingw32-make.exe"
-        if ((Test-Path $mingwMakePath) -and (-not (Test-Path $makePath))) {
-            try {
-                Copy-Item $mingwMakePath $makePath -Force
-                Write-Host " -> Created make.exe alias successfully." -ForegroundColor Green
-            } catch {}
-        }
-
-        foreach ($scope in @("Machine", "User")) {
-            try {
-                $currentPath = [Environment]::GetEnvironmentVariable("PATH", $scope)
-                if ($currentPath -notlike "*$makeBinDir*") {
-                    $newPath = if ([string]::IsNullOrEmpty($currentPath)) { $makeBinDir } else { "$currentPath;$makeBinDir" }
-                    [Environment]::SetEnvironmentVariable("PATH", $newPath, $scope)
-                    Write-Host " -> Added $makeBinDir to $scope PATH." -ForegroundColor Green
-                }
-            } catch {}
-        }
-
-        if ($env:PATH -notlike "*$makeBinDir*") {
-            $env:PATH = "$env:PATH;$makeBinDir"
-        }
-    } else {
-        Write-Host " -> Could not automatically detect 'make' path. You may need to add it to your PATH manually." -ForegroundColor Yellow
-    }
-}
-
-# 4. Core Installation Logic
+# 3. Core Installation Logic
 function Install-Application {
     param($App)
     Write-Host ("`n" + "="*50)
     Write-Host "Installing: $($App.Name)" -ForegroundColor Cyan
-
-    # Special handling for LunarVim (requires Neovim prerequisite and official installer script)
-    if ($App.Name -eq 'LunarVim') {
-        Write-Host " -> Ensuring Neovim prerequisite is installed..." -ForegroundColor Gray
-        $nvimInstalled = $false
-
-        if (Get-Command winget -ErrorAction SilentlyContinue) {
-            & winget install --id Neovim.Neovim --exact --silent --accept-package-agreements --accept-source-agreements
-            if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq -1978335189) { $nvimInstalled = $true }
-        }
-        if (-not $nvimInstalled -and (Get-Command choco -ErrorAction SilentlyContinue)) {
-            & choco install neovim -y
-            if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 3010) { $nvimInstalled = $true }
-        }
-        if (-not $nvimInstalled -and (Get-Command scoop -ErrorAction SilentlyContinue)) {
-            & scoop install neovim
-            if ($LASTEXITCODE -eq 0) { $nvimInstalled = $true }
-        }
-
-        Write-Host " -> Running LunarVim installer script..." -ForegroundColor Gray
-        try {
-            & pwsh -Command "iwr https://raw.githubusercontent.com/LunarVim/LunarVim/master/utils/installer/install.ps1 -UseBasicParsing | iex"
-            Write-Host " -> Success (LunarVim)" -ForegroundColor Green
-        } catch {
-            Write-Host " -> LunarVim installation failed: $_" -ForegroundColor Red
-        }
-
-        Add-MakeToPath
-        return
-    }
 
     # WinGet
     if (Get-Command winget -ErrorAction SilentlyContinue) {
@@ -172,7 +71,7 @@ function Install-Application {
     Write-Host " -> All package managers failed or are unavailable for $($App.Name). Manual installation required." -ForegroundColor Red
 }
 
-# 5. Interactive CLI Menu
+# 4. Interactive CLI Menu
 function Read-CliCheckboxes {
     param($Items)
     
@@ -238,7 +137,7 @@ function Read-CliCheckboxes {
     return $result
 }
 
-# 6. Execution
+# 5. Execution
 $Targets = Read-CliCheckboxes -Items $AppList
 
 if ($Targets.Count -eq 0) {
@@ -253,7 +152,7 @@ foreach ($Target in $Targets) {
     Install-Application -App $Target
 }
 
-# 7. Post-Installation
+# 6. Post-Installation
 Update-SessionEnvironment
 Write-Host "`nInstallation sequence complete." -ForegroundColor Green
 
