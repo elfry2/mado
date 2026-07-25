@@ -72,63 +72,86 @@ function Install-Application {
     Write-Host " -> All package managers failed or are unavailable for $($App.Name). Manual installation required." -ForegroundColor Red
 }
 
-# 4. Interactive GUI Menu (Windows Forms)
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Host "WARNING: Script is not running as Administrator. Some installations will fail." -ForegroundColor Red
-}
+# 4. Interactive CLI Menu
+function Read-CliCheckboxes {
+    param($Items)
+    
+    # Initialize all as selected
+    $selected = @($true) * $Items.Count 
 
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
+    while ($true) {
+        Clear-Host
+        Write-Host "`n===========================================================" -ForegroundColor Cyan
+        Write-Host " Windows 10 Setup - Application Installer" -ForegroundColor Green
+        Write-Host "===========================================================" -ForegroundColor Cyan
+        
+        $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if (-not $isAdmin) {
+            Write-Host " WARNING: Script is not running as Administrator." -ForegroundColor Red
+            Write-Host " Chocolatey and system-level installations may fail.`n" -ForegroundColor Red
+        }
 
-$form = New-Object System.Windows.Forms.Form
-$form.Text = 'Select Applications to Install'
-$form.Size = New-Object System.Drawing.Size(350, 260)
-$form.StartPosition = 'CenterScreen'
-$form.FormBorderStyle = 'FixedDialog'
-$form.MaximizeBox = $false
-$form.TopMost = $true # Ensures the dialog appears above the PowerShell window
+        Write-Host "`n All applications are selected by default." -ForegroundColor Gray
+        Write-Host " Type numbers separated by commas (e.g., 1, 3) to toggle them on/off." -ForegroundColor Gray
+        Write-Host " Press [Enter] with no input to confirm and begin installation.`n" -ForegroundColor Gray
 
-$checkedListBox = New-Object System.Windows.Forms.CheckedListBox
-$checkedListBox.Size = New-Object System.Drawing.Size(310, 140)
-$checkedListBox.Location = New-Object System.Drawing.Point(10, 10)
-$checkedListBox.CheckOnClick = $true
+        for ($i = 0; $i -lt $Items.Count; $i++) {
+            $check = if ($selected[$i]) { "[X]" } else { "[ ]" }
+            $color = if ($selected[$i]) { "White" } else { "DarkGray" }
+            Write-Host " $($i + 1). $check $($Items[$i].Name)" -ForegroundColor $color
+        }
 
-# Populate list and check all by default
-foreach ($app in $AppList) {
-    [void]$checkedListBox.Items.Add($app.Name, $true)
-}
+        Write-Host "`n Options:" -ForegroundColor Cyan
+        Write-Host "  [1-$($Items.Count)] Toggle specific applications" -ForegroundColor White
+        Write-Host "  [A] Toggle all" -ForegroundColor White
+        Write-Host "  [Q] Quit" -ForegroundColor White
+        Write-Host "  [Enter] Confirm and Install" -ForegroundColor White
+        
+        $input = Read-Host "`n Your selection"
 
-$okButton = New-Object System.Windows.Forms.Button
-$okButton.Size = New-Object System.Drawing.Size(75, 25)
-$okButton.Location = New-Object System.Drawing.Point(160, 170)
-$okButton.Text = 'Install'
-$okButton.DialogResult = 'OK'
-
-$cancelButton = New-Object System.Windows.Forms.Button
-$cancelButton.Size = New-Object System.Drawing.Size(75, 25)
-$cancelButton.Location = New-Object System.Drawing.Point(245, 170)
-$cancelButton.Text = 'Cancel'
-$cancelButton.DialogResult = 'Cancel'
-
-$form.Controls.AddRange(@($checkedListBox, $okButton, $cancelButton))
-$form.AcceptButton = $okButton
-$form.CancelButton = $cancelButton
-
-$result = $form.ShowDialog()
-
-if ($result -ne 'OK' -or $checkedListBox.CheckedItems.Count -eq 0) {
-    Write-Host "`nInstallation cancelled or no applications selected. Exiting." -ForegroundColor Yellow
-    Exit
-}
-
-# Map checked items back to the application objects
-$Targets = @()
-foreach ($checkedItem in $checkedListBox.CheckedItems) {
-    $Targets += $AppList | Where-Object { $_.Name -eq $checkedItem }
+        if ($input -match '(?i)^\s*q\s*$') {
+            Write-Host "`nInstallation cancelled. Exiting." -ForegroundColor Yellow
+            Exit
+        } elseif ($input -match '(?i)^\s*a\s*$') {
+            # Toggle all based on whether everything is currently selected or not
+            $allSelected = $true
+            foreach ($state in $selected) { if (-not $state) { $allSelected = $false; break } }
+            for ($i = 0; $i -lt $selected.Count; $i++) { $selected[$i] = -not $allSelected }
+        } elseif ([string]::IsNullOrWhiteSpace($input)) {
+            break # User pressed Enter with no input, proceed to install
+        } else {
+            # Handle comma-separated list of numbers
+            $parts = $input -split ','
+            foreach ($part in $parts) {
+                if ([int]::TryParse($part.Trim(), [ref]$null)) {
+                    $idx = [int]$part.Trim() - 1
+                    if ($idx -ge 0 -and $idx -lt $Items.Count) {
+                        $selected[$idx] = -not $selected[$idx] # Toggle specific index
+                    }
+                }
+            }
+        }
+    }
+    
+    # Map back to targets
+    $result = @()
+    for ($i = 0; $i -lt $Items.Count; $i++) {
+        if ($selected[$i]) { $result += $Items[$i] }
+    }
+    return $result
 }
 
 # 5. Execution
+$Targets = Read-CliCheckboxes -Items $AppList
+
+if ($Targets.Count -eq 0) {
+    Write-Host "`nNo applications selected. Exiting." -ForegroundColor Yellow
+    Exit
+}
+
+Clear-Host
+Write-Host "Starting installation sequence for $($Targets.Count) application(s)..." -ForegroundColor Green
+
 foreach ($Target in $Targets) {
     Install-Application -App $Target
 }
