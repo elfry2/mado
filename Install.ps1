@@ -1,7 +1,7 @@
 # Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'
 
-# 1. Application Definitions (Git added for native file utility support)
+# 1. Application Definitions
 $AppList = @(
     @{ Name = 'Git for Windows'; WinGet = 'Git.Git'; Choco = 'git'; Scoop = 'git' }
     @{ Name = 'Brave Browser'; WinGet = 'Brave.Brave'; Choco = 'brave'; Scoop = 'brave' }
@@ -36,31 +36,32 @@ function Set-YaziEnvironment {
 }
 
 function Set-YaziNeovimOpener {
-    Write-Host "`n[*] Configuring Yazi to use Neovim as the default text opener..." -ForegroundColor Cyan
+    Write-Host "`n[*] Configuring Yazi to use Neovim as the default 'edit' opener..." -ForegroundColor Cyan
     $yaziConfigDir = "$env:APPDATA\yazi\config"
     if (-not (Test-Path $yaziConfigDir)) {
         New-Item -ItemType Directory -Path $yaziConfigDir -Force | Out-Null
     }
     $yaziTomlPath = Join-Path $yaziConfigDir "yazi.toml"
     
-    $tomlContent = @"
+    $tomlContent = @'
 [opener]
 edit = [
-    { run = 'nvim "%s"', block = true, for = "windows" }
+    { run = 'nvim "%s"', block = true, for = "windows" },
+    { run = 'nvim "$@"', block = true, for = "unix" },
 ]
-"@
+'@
 
     if (Test-Path $yaziTomlPath) {
         $content = Get-Content $yaziTomlPath -Raw
-        if ($content -notmatch '\[opener\]') {
+        if ($content -notmatch 'edit\s*=') {
             Add-Content -Path $yaziTomlPath -Value "`n$tomlContent"
-            Write-Host " -> Added Neovim opener to existing $yaziTomlPath" -ForegroundColor Green
+            Write-Host " -> Added Neovim edit opener to existing yazi.toml" -ForegroundColor Green
         } else {
-            Write-Host " -> yazi.toml already contains an [opener] section. Skipping override to preserve custom settings." -ForegroundColor Yellow
+            Write-Host " -> yazi.toml already contains an 'edit' opener. Skipping override to preserve custom settings." -ForegroundColor Yellow
         }
     } else {
         Set-Content -Path $yaziTomlPath -Value $tomlContent -Encoding UTF8
-        Write-Host " -> Created yazi.toml with Neovim as text opener at $yaziTomlPath" -ForegroundColor Green
+        Write-Host " -> Created yazi.toml with Neovim edit opener at $yaziTomlPath" -ForegroundColor Green
     }
 }
 
