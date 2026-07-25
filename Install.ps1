@@ -72,7 +72,39 @@ function Install-Application {
     Write-Host " -> All package managers failed or are unavailable for $($App.Name). Manual installation required." -ForegroundColor Red
 }
 
-# 4. Interactive CLI Menu
+# 4. Yazi & Neovim Configuration Logic
+function Configure-YaziForNeovim {
+    Write-Host "`n[*] Configuring Yazi to use Neovim (nvim) as the default editor..." -ForegroundColor Cyan
+    
+    try {
+        [Environment]::SetEnvironmentVariable("EDITOR", "nvim", "User")
+        Write-Host " -> Set User Environment Variable EDITOR = nvim" -ForegroundColor Green
+    } catch {
+        Write-Host " -> Could not set EDITOR environment variable: $_" -ForegroundColor Yellow
+    }
+
+    $yaziConfigDir = "$env:APPDATA\yazi\config"
+    $yaziLegacyDir = "$env:APPDATA\yazi"
+
+    foreach ($dir in @($yaziConfigDir, $yaziLegacyDir)) {
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
+    }
+
+    $yaziTomlContent = @"
+[opener]
+edit = [
+    { run = 'nvim %s', block = true, desc = "Neovim" },
+]
+"@
+
+    Set-Content -Path "$yaziConfigDir\yazi.toml" -Value $yaziTomlContent -Encoding utf8
+    Set-Content -Path "$yaziLegacyDir\yazi.toml" -Value $yaziTomlContent -Encoding utf8
+    Write-Host " -> Yazi configuration updated successfully with Neovim opener." -ForegroundColor Green
+}
+
+# 5. Interactive CLI Menu
 function Read-CliCheckboxes {
     param($Items)
     
@@ -138,7 +170,7 @@ function Read-CliCheckboxes {
     return $result
 }
 
-# 5. Execution
+# 6. Execution
 $Targets = Read-CliCheckboxes -Items $AppList
 
 if ($Targets.Count -eq 0) {
@@ -153,7 +185,12 @@ foreach ($Target in $Targets) {
     Install-Application -App $Target
 }
 
-# 6. Post-Installation
+# Configure Yazi if selected
+if ($Targets.Name -contains 'Yazi') {
+    Configure-YaziForNeovim
+}
+
+# 7. Post-Installation
 Update-SessionEnvironment
 Write-Host "`nInstallation sequence complete." -ForegroundColor Green
 
