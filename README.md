@@ -6,7 +6,7 @@ Code written by Gemini. The conversations can be found on the following links:
 - [https://share.gemini.google/HAUs8u7Rf9Uq](https://share.gemini.google/HAUs8u7Rf9Uq)
 
 The script does the following:
-- Install Windows Terminal, PowerShell 7, Neovim, Brave Browser, and ONLYOFFICE Desktop Editors in machine scope, as opposed to user scope
+- Install Windows Terminal, PowerShell 7, Neovim, Brave Browser, and ONLYOFFICE Desktop Editors
 - Ask users to consider using [Ecosia](https://www.ecosia.org/)
 
 ## Installation
